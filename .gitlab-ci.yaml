@@ -19,15 +19,12 @@ variables:
   DOCKER_DRIVER: overlay2
   KUBECONFIG: /home/core/deployment-config
 
-  PIP_INDEX_URL: "http://192.168.11.22:31354/root/pypi/+simple/"
-  PIP_HOST: "192.168.11.22"
+  PIP_INDEX_URL: "http://pip.mirror.internal/root/pypi/+simple/"
+  PIP_HOST: "pip.mirror.internal"
 
   POSTGRES_USER: test_user
   POSTGRES_DB: testdb
   POSTGRES_PASSWORD: test_pass
-
-before_script:
-  - docker login -u gitlab-ci -p $CI_BUILD_TOKEN $STAGING_REGISTRY
 
 compile:
   stage: compile
@@ -57,7 +54,7 @@ deploy_production:
   stage: deploy
   image: lwolf/kubectl_deployer:latest
   script:
-    - kubectl config use-context uberkube
+    - kubectl config use-context production
     - /bin/sh deploy.sh ${CI_BUILD_REF_NAME}_${CI_BUILD_REF}
   environment: production
   when: manual
