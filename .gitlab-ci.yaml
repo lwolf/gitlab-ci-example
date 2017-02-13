@@ -1,0 +1,63 @@
+image: docker:latest
+
+services:
+  - docker:dind
+
+stages:
+  - build
+  - deploy
+
+cache:
+  key: "$CI_BUILD_REF"
+  paths:
+    - src/static/dist
+
+
+variables:
+  REGISTRY: "registry.internal"
+  CONTAINER_IMAGE: ${REGISTRY}/${CI_PROJECT_NAME}:${CI_BUILD_REF_NAME}_${CI_BUILD_REF}
+  DOCKER_DRIVER: overlay2
+  KUBECONFIG: /home/core/deployment-config
+
+  PIP_INDEX_URL: "http://192.168.11.22:31354/root/pypi/+simple/"
+  PIP_HOST: "192.168.11.22"
+
+  POSTGRES_USER: test_user
+  POSTGRES_DB: testdb
+  POSTGRES_PASSWORD: test_pass
+
+before_script:
+  - docker login -u gitlab-ci -p $CI_BUILD_TOKEN $STAGING_REGISTRY
+
+compile:
+  stage: compile
+  image: iteamdev/node-webpack:latest
+  script:
+    - npm run deploy
+
+build:
+  stage: build
+  before_script:
+    - docker login -u gitlab-ci -p $REGISTRY_PASSWORD $REGISTRY
+  script:
+    - cd src
+    - sh build_base.sh gitlab-ci ${REGISTRY_PASSWORD} ${REGISTRY}
+    - sed -i -e "s/master-base-latest/master-base-$(md5sum requirements.txt | cut -d' ' -f1)/g" Dockerfile
+    - docker build -t $CONTAINER_IMAGE -f Dockerfile .
+    - docker run -d --name=postgres -e POSTGRES_USER=$POSTGRES_USER -e POSTGRES_DB=$POSTGRES_DB -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD postgres:9.6-alpine
+    - docker run -d --name=redis redis:3.2.4-alpine
+    - cd ..
+    - docker run --env-file=.environment.test --link=postgres:db $CONTAINER_IMAGE nosetests --with-coverage --cover-erase --cover-package=seocat --cover-html
+    - docker push $CONTAINER_IMAGE
+  after_script:
+    - docker stop $(docker ps -aqf "name=postgres") || true
+    - docker rm $(docker ps -aqf "name=postgres") || true
+
+deploy_production:
+  stage: deploy
+  image: lwolf/kubectl_deployer:latest
+  script:
+    - kubectl config use-context uberkube
+    - /bin/sh deploy.sh ${CI_BUILD_REF_NAME}_${CI_BUILD_REF}
+  environment: production
+  when: manual

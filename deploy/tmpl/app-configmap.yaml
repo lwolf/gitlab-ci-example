@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  sqlalchemy_database_uri: ''
+  site_name: ''
+  redis_db_host: ''
+  redis_db_port: ''

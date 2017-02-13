@@ -1,0 +1,14 @@
+alembic==0.8.8
+coverage==4.2
+decorator==4.0.10
+factory-boy==2.7.0
+fake-factory==0.7.2
+Flask==0.11.1
+Flask-Migrate==2.0.0
+Flask-DebugToolbar==0.10.0
+Flask-SQLAlchemy==2.1
+gunicorn==19.6.0
+Jinja2==2.8
+psycopg2==2.6.2
+requests==2.11.1
+SQLAlchemy==1.1.2

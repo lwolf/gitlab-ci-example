@@ -1,0 +1,51 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: app
+    spec:
+      containers:
+      - name: app
+        image: registry.internal/app:${BUILD_NUMBER}
+        command: ["python manage.py runserver"]
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 3
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        env:
+        - name: SQLALCHEMY_DATABASE_URI
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: sqlalchemy_database_uri
+        - name: SITE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: site_name
+        - name: REDIS_DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: redis_db_host
+        - name: REDIS_DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: redis_db_port
